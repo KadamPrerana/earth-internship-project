@@ -296,7 +296,9 @@ class TaskAPITests(BaseTestCase):
         """
         response = self.client.post('/api/users/tasks/create/', {
             'email': 'taskuser@example.com',
-            'text': 'Test task',
+            'title': 'Test task',
+            'description': 'A detailed task description',
+            'priority': 'High',
             'start_date': '2026-02-17',
             'due_date': '2026-02-20',
         }, format='json')
@@ -312,14 +314,14 @@ class TaskAPITests(BaseTestCase):
         """
         response = self.client.post('/api/users/tasks/create/', {
             'email': 'taskuser@example.com',
-            'text': 'Should be pending',
+            'title': 'Should be pending',
             'status': 'Completed',                  # Client sends 'Completed'
         }, format='json')
 
         self.assertEqual(response.status_code, 201)
 
         # Verify task was saved with 'Pending' (not 'Completed')
-        task = Task.objects(text='Should be pending').first()
+        task = Task.objects(title='Should be pending').first()
         self.assertEqual(task.status, 'Pending')
 
     def test_create_task_no_user(self):
@@ -329,7 +331,7 @@ class TaskAPITests(BaseTestCase):
         """
         response = self.client.post('/api/users/tasks/create/', {
             'email': 'nobody@example.com',           # User doesn't exist
-            'text': 'Orphan task',
+            'title': 'Orphan task',
         }, format='json')
 
         self.assertEqual(response.status_code, 400)
@@ -341,10 +343,10 @@ class TaskAPITests(BaseTestCase):
         """
         # Create two tasks
         self.client.post('/api/users/tasks/create/', {
-            'email': 'taskuser@example.com', 'text': 'Task 1',
+            'email': 'taskuser@example.com', 'title': 'Task 1',
         }, format='json')
         self.client.post('/api/users/tasks/create/', {
-            'email': 'taskuser@example.com', 'text': 'Task 2',
+            'email': 'taskuser@example.com', 'title': 'Task 2',
         }, format='json')
 
         response = self.client.get('/api/users/tasks/list/taskuser@example.com/')
@@ -359,7 +361,7 @@ class TaskAPITests(BaseTestCase):
         """
         # Create a task
         create_response = self.client.post('/api/users/tasks/create/', {
-            'email': 'taskuser@example.com', 'text': 'Update me',
+            'email': 'taskuser@example.com', 'title': 'Update me',
         }, format='json')
         task_id = create_response.data['task_id']
 
@@ -374,24 +376,26 @@ class TaskAPITests(BaseTestCase):
         task = Task.objects(id=task_id).first()
         self.assertEqual(task.status, 'In Progress')
 
-    def test_update_task_text(self):
+    def test_update_task_title(self):
         """
-        Test: PUT /api/users/tasks/update/<id>/ changes task text.
-        Why:  Verifies the edit functionality works.
+        Test: PUT /api/users/tasks/update/<id>/ changes task title, description, and priority.
+        Why:  Verifies the edit functionality works for new fields.
         """
         create_response = self.client.post('/api/users/tasks/create/', {
-            'email': 'taskuser@example.com', 'text': 'Old text',
+            'email': 'taskuser@example.com', 'title': 'Old title', 'priority': 'Low'
         }, format='json')
         task_id = create_response.data['task_id']
 
         response = self.client.put(f'/api/users/tasks/update/{task_id}/', {
-            'text': 'New text',
+            'title': 'New title',
+            'priority': 'High',
         }, format='json')
 
         self.assertEqual(response.status_code, 200)
 
         task = Task.objects(id=task_id).first()
-        self.assertEqual(task.text, 'New text')
+        self.assertEqual(task.title, 'New title')
+        self.assertEqual(task.priority, 'High')
 
     def test_delete_task(self):
         """
@@ -399,7 +403,7 @@ class TaskAPITests(BaseTestCase):
         Why:  Verifies task deletion works and the task is gone.
         """
         create_response = self.client.post('/api/users/tasks/create/', {
-            'email': 'taskuser@example.com', 'text': 'Delete me',
+            'email': 'taskuser@example.com', 'title': 'Delete me',
         }, format='json')
         task_id = create_response.data['task_id']
 
@@ -418,7 +422,7 @@ class TaskAPITests(BaseTestCase):
         """
         # Create tasks for the user
         self.client.post('/api/users/tasks/create/', {
-            'email': 'taskuser@example.com', 'text': 'Task to cascade',
+            'email': 'taskuser@example.com', 'title': 'Task to cascade',
         }, format='json')
 
         # Delete the user

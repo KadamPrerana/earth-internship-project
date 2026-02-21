@@ -83,7 +83,12 @@ class User(Document):
 # ============================================================
 class Task(Document):
     email = StringField(required=True)                          # User's email (links task to user)
-    text = StringField(required=True, max_length=500)           # Task description
+    title = StringField(required=True, max_length=500, db_field='text') # Task title (maps to old 'text')
+    description = StringField(max_length=1000, default='')      # detailed task description
+    priority = StringField(
+        default='Medium',
+        choices=['Low', 'Medium', 'High']
+    )
     status = StringField(
         default='Pending',
         choices=['Pending', 'In Progress', 'Completed']

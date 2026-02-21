@@ -18,13 +18,16 @@ const TASKS_PATH = '/users/tasks';
 
 
 /**
- * Fetch all tasks for a given user.
+ * Fetch all tasks for a given user, with optional filters.
  *
  * @param {string} email - User's email
+ * @param {object} query - Optional query params (search, status, priority, date)
  * @returns {Array} List of task objects
  */
-export const getTasks = async (email) => {
-    const res = await api.get(`${TASKS_PATH}/list/${email}/`);
+export const getTasks = async (email, query = {}) => {
+    const params = new URLSearchParams(query).toString();
+    const url = params ? `${TASKS_PATH}/list/${email}/?${params}` : `${TASKS_PATH}/list/${email}/`;
+    const res = await api.get(url);
     return res.data;
 };
 
@@ -32,7 +35,7 @@ export const getTasks = async (email) => {
 /**
  * Create a new task.
  *
- * @param {object} data - { email, text, status, start_date, due_date }
+ * @param {object} data - { email, title, description, priority, status, start_date, due_date }
  * @returns {object} { message, task_id }
  */
 export const createTask = async (data) => {

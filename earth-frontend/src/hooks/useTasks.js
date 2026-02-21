@@ -26,12 +26,12 @@ export function useTasks(userEmail) {
     const [loading, setLoading] = useState(true);
 
     /* ---- Fetch tasks from server ---- */
-    const fetchTasks = useCallback(async () => {
+    const fetchTasks = useCallback(async (filters = {}) => {
         if (!userEmail) return;
 
         try {
             setLoading(true);
-            const data = await taskService.getTasks(userEmail);
+            const data = await taskService.getTasks(userEmail, filters);
             setTasks(data);
         } catch (err) {
             console.error('Error fetching tasks:', err);
@@ -40,31 +40,35 @@ export function useTasks(userEmail) {
         }
     }, [userEmail]);
 
-    /* Fetch tasks when userEmail changes */
+    /* Fetch tasks when userEmail changes initially */
     useEffect(() => {
         fetchTasks();
     }, [fetchTasks]);
 
     /* ---- Create a new task ---- */
-    const addTask = async ({ text, status = 'Pending', start_date = '', due_date = '' }) => {
+    const addTask = async ({ title, description = '', priority = 'Medium', status = 'Pending', start_date = '', due_date = '' }) => {
         try {
             const result = await taskService.createTask({
                 email: userEmail,
-                text: text.trim(),
+                title: title.trim(),
+                description: description.trim(),
+                priority,
                 status,
                 start_date,
                 due_date,
             });
 
             // Optimistic update — add to local state immediately
-            setTasks((prev) => [...prev, {
+            setTasks((prev) => [{
                 _id: result.task_id,
-                text: text.trim(),
+                title: title.trim(),
+                description: description.trim(),
+                priority,
                 status,
                 start_date,
                 due_date,
                 email: userEmail,
-            }]);
+            }, ...prev]);
 
             return result;
         } catch (err) {

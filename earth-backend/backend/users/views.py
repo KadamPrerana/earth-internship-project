@@ -302,8 +302,8 @@ def create_task(request):
     try:
         data = request.data
 
-        if not data.get("email") or not data.get("text"):
-            raise ValidationError("Email and task text are required")
+        if not data.get("email") or not data.get("title"):
+            raise ValidationError("Email and task title are required")
 
         # Validate: Check if user with this email exists in the database
         # Task should only be created for registered users
@@ -318,7 +318,9 @@ def create_task(request):
         # ORM: Create and save a new Task document
         task = Task(
             email=data.get("email"),
-            text=data.get("text"),
+            title=data.get("title"),
+            description=data.get("description", ""),
+            priority=data.get("priority", "Medium"),
             status=task_status,
             start_date=data.get("start_date", ""),
             due_date=data.get("due_date", ""),
@@ -346,13 +348,33 @@ def create_task(request):
 @api_view(['GET'])
 def get_tasks(request, email):
     try:
-        # Optimized query:
-        #   .only() — field projection, loads only needed fields
-        #   .order_by('-created_at') — leverages (email, -created_at) compound index
-        #   Filter on email uses the 'email' single-field index
+        # Extract query parameters for Search and Filtering
+        search_query = request.GET.get('search', '').strip()
+        status_filter = request.GET.get('status', '').strip()
+        priority_filter = request.GET.get('priority', '').strip()
+        date_filter = request.GET.get('date', '').strip()
+
+        # Build MongoEngine Query Dictionary
+        query_kwargs = {'email': email}
+        
+        if search_query:
+            # Case-insensitive substring search on title
+            query_kwargs['title__icontains'] = search_query
+            
+        if status_filter:
+            query_kwargs['status'] = status_filter
+            
+        if priority_filter:
+            query_kwargs['priority'] = priority_filter
+            
+        if date_filter:
+            # Filter tasks due exactly on the specified date
+            query_kwargs['due_date'] = date_filter
+
+        # Optimized query with filters:
         tasks = (
-            Task.objects(email=email)
-            .only('email', 'text', 'status', 'start_date', 'due_date', 'created_at')
+            Task.objects(**query_kwargs)
+            .only('email', 'title', 'description', 'priority', 'status', 'start_date', 'due_date', 'created_at')
             .order_by('-created_at')
         )
 
@@ -361,7 +383,9 @@ def get_tasks(request, email):
             tasks_list.append({
                 "_id": str(task.id),
                 "email": task.email,
-                "text": task.text,
+                "title": getattr(task, 'title', None) or "",
+                "description": getattr(task, 'description', None) or "",
+                "priority": getattr(task, 'priority', None) or "Medium",
                 "status": getattr(task, 'status', None) or "Pending",
                 "start_date": getattr(task, 'start_date', None) or "",
                 "due_date": getattr(task, 'due_date', None) or "",
@@ -394,8 +418,13 @@ def update_task(request, task_id):
 
         # ORM Update: Build update kwargs using set__ prefix
         update_data = {}
-        if "text" in data:
-            update_data["set__text"] = data["text"]
+        if "title" in data:
+            update_data["set__title"] = data["title"]
+        if "description" in data:
+            update_data["set__description"] = data["description"]
+        if "priority" in data:
+            if data["priority"] in ["Low", "Medium", "High"]:
+                update_data["set__priority"] = data["priority"]
         if "status" in data:
             if data["status"] in ["Pending", "In Progress", "Completed"]:
                 update_data["set__status"] = data["status"]

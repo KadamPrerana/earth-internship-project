@@ -1,26 +1,11 @@
 /* ============================================================
    TaskList.js — Professional Task Manager with Status & Dates
-   ============================================================
-   Uses:
-     - useTasks() custom hook for all CRUD operations
-     - taskService via the hook (which uses JWT-enabled Axios)
-
-   Features:
-     - Task status dropdown: Pending / In Progress / Completed
-     - Start Date and Due Date pickers
-     - Inline editing for all task fields
-     - Color-coded status badges
-     - Task count summary dashboard
-     - Expandable "Add Task" form
-
-   Props:
-     - userEmail: The logged-in user's email
    ============================================================ */
 
 import { useState } from 'react';
 import {
     FiPlus, FiTrash2, FiEdit2, FiSave, FiX,
-    FiLoader, FiCalendar
+    FiLoader, FiCalendar, FiFilter, FiSearch, FiRefreshCcw
 } from 'react-icons/fi';
 import { useTasks } from '../hooks/useTasks';
 
@@ -45,41 +30,80 @@ const STATUS_CONFIG = {
     },
 };
 
+const PRIORITY_CONFIG = {
+    'High': { color: '#ef4444', bg: '#fee2e2' },
+    'Medium': { color: '#f59e0b', bg: '#fef3c7' },
+    'Low': { color: '#22c55e', bg: '#dcfce7' },
+};
+
 function TaskList({ userEmail }) {
     /* ---- Custom Hook for Task CRUD ---- */
-    const { tasks, loading, addTask, editTask, removeTask, changeStatus } = useTasks(userEmail);
+    const { tasks, loading, fetchTasks, addTask, editTask, removeTask, changeStatus } = useTasks(userEmail);
 
     /* ---- Local UI State ---- */
     const [showAddForm, setShowAddForm] = useState(false);
 
+    /* ---- Filters State ---- */
+    const [filterSearch, setFilterSearch] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+    const [filterPriority, setFilterPriority] = useState('');
+    const [filterDate, setFilterDate] = useState('');
+
     /* ---- New Task Form State ---- */
-    const [newText, setNewText] = useState('');
-    const [newStatus, setNewStatus] = useState('Pending');
+    const [newTitle, setNewTitle] = useState('');
+    const [newDescription, setNewDescription] = useState('');
+    const [newPriority, setNewPriority] = useState('Medium');
     const [newStartDate, setNewStartDate] = useState('');
     const [newDueDate, setNewDueDate] = useState('');
 
     /* ---- Edit Task State ---- */
     const [editingId, setEditingId] = useState(null);
-    const [editText, setEditText] = useState('');
+    const [editTitle, setEditTitle] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+    const [editPriority, setEditPriority] = useState('');
     const [editStatus, setEditStatus] = useState('');
     const [editStartDate, setEditStartDate] = useState('');
     const [editDueDate, setEditDueDate] = useState('');
 
+    /* ---- Today's date for validation ---- */
+    const today = new Date().toISOString().split('T')[0];
+
+    /* ---- Fetch with Filters ---- */
+    const applyFilters = () => {
+        fetchTasks({
+            search: filterSearch,
+            status: filterStatus,
+            priority: filterPriority,
+            date: filterDate
+        });
+    };
+
+    const clearFilters = () => {
+        setFilterSearch('');
+        setFilterStatus('');
+        setFilterPriority('');
+        setFilterDate('');
+        fetchTasks({});
+    };
+
     /* ---- CREATE — Add a New Task ---- */
     const handleAddTask = async () => {
-        if (newText.trim() === '') return;
+        if (newTitle.trim() === '') return;
 
         try {
             await addTask({
-                text: newText,
+                title: newTitle,
+                description: newDescription,
+                priority: newPriority,
                 status: 'Pending',
                 start_date: newStartDate,
                 due_date: newDueDate,
             });
 
             /* Reset form fields */
-            setNewText('');
-            setNewStatus('Pending');
+            setNewTitle('');
+            setNewDescription('');
+            setNewPriority('Medium');
             setNewStartDate('');
             setNewDueDate('');
             setShowAddForm(false);
@@ -90,11 +114,13 @@ function TaskList({ userEmail }) {
 
     /* ---- UPDATE — Save Edited Task ---- */
     const saveEdit = async (id) => {
-        if (editText.trim() === '') return;
+        if (editTitle.trim() === '') return;
 
         try {
             await editTask(id, {
-                text: editText.trim(),
+                title: editTitle.trim(),
+                description: editDescription.trim(),
+                priority: editPriority,
                 status: editStatus,
                 start_date: editStartDate,
                 due_date: editDueDate,
@@ -126,7 +152,9 @@ function TaskList({ userEmail }) {
     /* ---- Start Editing a Task ---- */
     const startEdit = (task) => {
         setEditingId(task._id);
-        setEditText(task.text);
+        setEditTitle(task.title || task.text || '');
+        setEditDescription(task.description || '');
+        setEditPriority(task.priority || 'Medium');
         setEditStatus(task.status || 'Pending');
         setEditStartDate(task.start_date || '');
         setEditDueDate(task.due_date || '');
@@ -150,73 +178,138 @@ function TaskList({ userEmail }) {
     const inProgressTasks = tasks.filter(t => t.status === 'In Progress').length;
     const pendingTasks = tasks.filter(t => !t.status || t.status === 'Pending').length;
 
-    /* ============================================================
-       RENDER
-       ============================================================ */
     return (
         <div>
             {/* ===== Task Summary Dashboard ===== */}
             {!loading && totalTasks > 0 && (
-                <div style={styles.summaryBar}>
-                    <div style={styles.summaryCard}>
-                        <span style={{ ...styles.summaryNum, color: '#667eea' }}>{totalTasks}</span>
-                        <span style={styles.summaryLabel}>Total</span>
+                <div className="summary-bar animate-fade-in">
+                    <div className="summary-card">
+                        <span className="summary-num" style={{ color: '#667eea' }}>{totalTasks}</span>
+                        <span className="summary-label">Total</span>
                     </div>
-                    <div style={styles.summaryCard}>
-                        <span style={{ ...styles.summaryNum, color: '#f59e0b' }}>{pendingTasks}</span>
-                        <span style={styles.summaryLabel}>Pending</span>
+                    <div className="summary-card">
+                        <span className="summary-num" style={{ color: '#f59e0b' }}>{pendingTasks}</span>
+                        <span className="summary-label">Pending</span>
                     </div>
-                    <div style={styles.summaryCard}>
-                        <span style={{ ...styles.summaryNum, color: '#3b82f6' }}>{inProgressTasks}</span>
-                        <span style={styles.summaryLabel}>In Progress</span>
+                    <div className="summary-card">
+                        <span className="summary-num" style={{ color: '#3b82f6' }}>{inProgressTasks}</span>
+                        <span className="summary-label">In Progress</span>
                     </div>
-                    <div style={styles.summaryCard}>
-                        <span style={{ ...styles.summaryNum, color: '#22c55e' }}>{completedTasks}</span>
-                        <span style={styles.summaryLabel}>Completed</span>
+                    <div className="summary-card">
+                        <span className="summary-num" style={{ color: '#22c55e' }}>{completedTasks}</span>
+                        <span className="summary-label">Completed</span>
                     </div>
                 </div>
             )}
 
+            {/* ===== Search & Filter Bar ===== */}
+            <div className="filter-bar animate-fade-in">
+                <div className="filter-group">
+                    <FiSearch className="filter-icon" />
+                    <input
+                        className="filter-input"
+                        placeholder="Search keyword..."
+                        value={filterSearch}
+                        onChange={(e) => setFilterSearch(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+                    />
+                </div>
+                <div className="filter-group">
+                    <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <select className="filter-select" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+                        <option value="">All Priorities</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+                <div className="filter-group">
+                    <input
+                        className="filter-date"
+                        type="date"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                        title="Filter by due date"
+                    />
+                </div>
+                <button className="filter-btn" onClick={applyFilters}>
+                    <FiFilter /> Apply
+                </button>
+                <button className="filter-clear-btn" onClick={clearFilters}>
+                    <FiRefreshCcw /> Clear
+                </button>
+            </div>
+
             {/* ===== Add Task Button / Form ===== */}
             {!showAddForm ? (
-                <button style={styles.addTaskBtn} onClick={() => setShowAddForm(true)}>
+                <button className="add-task-btn animate-fade-in" onClick={() => setShowAddForm(true)}>
                     <FiPlus style={{ marginRight: '8px' }} />
                     Add New Task
                 </button>
             ) : (
-                <div style={styles.formCard}>
-                    <h3 style={styles.formTitle}>
+                <div className="form-card animate-fade-in">
+                    <h3 className="form-title">
                         <FiPlus style={{ marginRight: '6px' }} /> New Task
                     </h3>
 
-                    {/* Task Description */}
+                    {/* Task Title */}
                     <input
-                        style={styles.formInput}
+                        className="form-input"
                         type="text"
-                        placeholder="What needs to be done?"
-                        value={newText}
-                        onChange={(e) => setNewText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                        placeholder="Task Title (What needs to be done?)"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
                         autoFocus
                     />
 
-                    {/* Dates Row — Status is always Pending on create */}
-                    <div style={{ ...styles.formRow, gridTemplateColumns: '1fr 1fr' }}>
-                        <div style={styles.formGroup}>
-                            <label style={styles.formLabel}>Start Date</label>
+                    {/* Task Description */}
+                    <textarea
+                        className="form-textarea"
+                        placeholder="Detailed description (optional)"
+                        value={newDescription}
+                        onChange={(e) => setNewDescription(e.target.value)}
+                        rows="3"
+                    />
+
+                    {/* Dates & Priority */}
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">Priority</label>
+                            <select
+                                className="form-select"
+                                value={newPriority}
+                                onChange={(e) => setNewPriority(e.target.value)}
+                            >
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Start Date</label>
                             <input
-                                style={styles.formDate}
+                                className="form-date"
                                 type="date"
+                                min={today}
                                 value={newStartDate}
                                 onChange={(e) => setNewStartDate(e.target.value)}
                             />
                         </div>
 
-                        <div style={styles.formGroup}>
-                            <label style={styles.formLabel}>Due Date</label>
+                        <div className="form-group">
+                            <label className="form-label">Due Date</label>
                             <input
-                                style={styles.formDate}
+                                className="form-date"
                                 type="date"
+                                min={newStartDate || today}
                                 value={newDueDate}
                                 onChange={(e) => setNewDueDate(e.target.value)}
                             />
@@ -224,16 +317,16 @@ function TaskList({ userEmail }) {
                     </div>
 
                     {/* Default status indicator */}
-                    <p style={{ margin: '0 0 4px', fontSize: '0.82rem', color: '#94a3b8' }}>
+                    <p style={{ margin: '0 0 12px', fontSize: '0.85rem', color: '#94a3b8' }}>
                         ⏳ Status will be set to <strong style={{ color: '#f59e0b' }}>Pending</strong> by default
                     </p>
 
                     {/* Form Action Buttons */}
-                    <div style={styles.formActions}>
-                        <button style={styles.createBtn} onClick={handleAddTask}>
+                    <div className="form-actions">
+                        <button className="create-btn" onClick={handleAddTask}>
                             <FiPlus style={{ marginRight: '6px' }} /> Create Task
                         </button>
-                        <button style={styles.cancelFormBtn} onClick={() => { setShowAddForm(false); setNewText(''); }}>
+                        <button className="cancel-form-btn" onClick={() => { setShowAddForm(false); setNewTitle(''); setNewDescription(''); }}>
                             Cancel
                         </button>
                     </div>
@@ -242,363 +335,170 @@ function TaskList({ userEmail }) {
 
             {/* ===== Loading State ===== */}
             {loading && (
-                <p style={styles.emptyState}>
-                    <FiLoader style={{ animation: 'spin 1s linear infinite' }} /> Loading tasks...
+                <p className="empty-state">
+                    <FiLoader className="spin-icon" style={{ animation: 'spin 1s linear infinite', marginRight: '8px', display: 'inline-block' }} /> Loading tasks...
                 </p>
             )}
 
             {/* ===== Empty State ===== */}
             {!loading && tasks.length === 0 && (
-                <div style={styles.emptyState}>
-                    <p style={{ fontSize: '2rem', marginBottom: '8px' }}>📋</p>
-                    <p style={{ color: '#64748b', fontWeight: 500 }}>No tasks yet</p>
-                    <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Click "Add New Task" to get started!</p>
+                <div className="empty-state animate-fade-in">
+                    <p style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📋</p>
+                    <p style={{ color: '#64748b', fontWeight: 600, fontSize: '1.2rem' }}>No tasks found</p>
+                    <p style={{ color: '#94a3b8', fontSize: '0.95rem' }}>Try adjusting your filters or add a new task!</p>
                 </div>
             )}
 
             {/* ===== Task Cards ===== */}
-            {tasks.map((task) => {
-                const statusConf = STATUS_CONFIG[task.status] || STATUS_CONFIG['Pending'];
-                const isEditing = editingId === task._id;
+            <div className="task-list-container">
+                {tasks.map((task) => {
+                    const statusConf = STATUS_CONFIG[task.status] || STATUS_CONFIG['Pending'];
+                    const priorityConf = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG['Medium'];
+                    const isEditing = editingId === task._id;
 
-                return (
-                    <div key={task._id} style={{
-                        ...styles.taskCard,
-                        borderLeft: `4px solid ${statusConf.color}`,
-                    }}>
-                        {isEditing ? (
-                            /* ===== EDIT MODE ===== */
-                            <div style={styles.editContainer}>
-                                <input
-                                    style={styles.formInput}
-                                    type="text"
-                                    value={editText}
-                                    onChange={(e) => setEditText(e.target.value)}
-                                    autoFocus
-                                />
+                    return (
+                        <div key={task._id} className="task-card animate-fade-in" style={{
+                            borderLeft: `5px solid ${statusConf.color}`,
+                        }}>
+                            {isEditing ? (
+                                /* ===== EDIT MODE ===== */
+                                <div className="edit-container">
+                                    <input
+                                        className="form-input"
+                                        type="text"
+                                        value={editTitle}
+                                        onChange={(e) => setEditTitle(e.target.value)}
+                                        placeholder="Task Title"
+                                        autoFocus
+                                    />
+                                    <textarea
+                                        className="form-textarea"
+                                        value={editDescription}
+                                        onChange={(e) => setEditDescription(e.target.value)}
+                                        placeholder="Detailed description"
+                                        rows="2"
+                                    />
 
-                                <div style={styles.formRow}>
-                                    <div style={styles.formGroup}>
-                                        <label style={styles.formLabel}>Status</label>
+                                    <div className="form-row-4">
+                                        <div className="form-group">
+                                            <label className="form-label">Priority</label>
+                                            <select
+                                                className="form-select"
+                                                value={editPriority}
+                                                onChange={(e) => setEditPriority(e.target.value)}
+                                            >
+                                                <option value="Low">Low</option>
+                                                <option value="Medium">Medium</option>
+                                                <option value="High">High</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Status</label>
+                                            <select
+                                                className="form-select"
+                                                value={editStatus}
+                                                onChange={(e) => setEditStatus(e.target.value)}
+                                            >
+                                                <option value="Pending">⏳ Pending</option>
+                                                <option value="In Progress">🔄 In Progress</option>
+                                                <option value="Completed">✅ Completed</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Start Date</label>
+                                            <input
+                                                className="form-date"
+                                                type="date"
+                                                min={today}
+                                                value={editStartDate}
+                                                onChange={(e) => setEditStartDate(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Due Date</label>
+                                            <input
+                                                className="form-date"
+                                                type="date"
+                                                min={editStartDate || today}
+                                                value={editDueDate}
+                                                onChange={(e) => setEditDueDate(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-actions" style={{ marginTop: '12px' }}>
+                                        <button className="save-edit-btn" onClick={() => saveEdit(task._id)}>
+                                            <FiSave style={{ marginRight: '6px' }} /> Save Changes
+                                        </button>
+                                        <button className="cancel-form-btn" onClick={cancelEdit}>
+                                            <FiX style={{ marginRight: '6px' }} /> Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* ===== DISPLAY MODE ===== */
+                                <>
+                                    <div className="task-top-row">
+                                        <div className="task-header-info">
+                                            <span className={`task-title ${task.status === 'Completed' ? 'completed-text' : ''}`}>
+                                                {task.title || task.text}
+                                            </span>
+                                            <span className="priority-badge" style={{
+                                                backgroundColor: priorityConf.bg,
+                                                color: priorityConf.color,
+                                                border: `1px solid ${priorityConf.color}40`
+                                            }}>
+                                                {task.priority || 'Medium'}
+                                            </span>
+                                        </div>
+
+                                        <div className="task-actions">
+                                            <button className="icon-btn edit-btn" onClick={() => startEdit(task)} title="Edit Task">
+                                                <FiEdit2 />
+                                            </button>
+                                            <button className="icon-btn delete-btn" onClick={() => handleDelete(task._id)} title="Delete Task">
+                                                <FiTrash2 />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {task.description && (
+                                        <div className={`task-description ${task.status === 'Completed' ? 'completed-text' : ''}`}>
+                                            {task.description}
+                                        </div>
+                                    )}
+
+                                    <div className="task-bottom-row">
                                         <select
-                                            style={styles.formSelect}
-                                            value={editStatus}
-                                            onChange={(e) => setEditStatus(e.target.value)}
+                                            className="status-select-inline"
+                                            style={{
+                                                color: statusConf.color,
+                                                background: statusConf.bg,
+                                                border: `1px solid ${statusConf.color}40`
+                                            }}
+                                            value={task.status || 'Pending'}
+                                            onChange={(e) => handleStatusChange(task._id, e.target.value)}
                                         >
                                             <option value="Pending">⏳ Pending</option>
                                             <option value="In Progress">🔄 In Progress</option>
                                             <option value="Completed">✅ Completed</option>
                                         </select>
-                                    </div>
-                                    <div style={styles.formGroup}>
-                                        <label style={styles.formLabel}>Start Date</label>
-                                        <input
-                                            style={styles.formDate}
-                                            type="date"
-                                            value={editStartDate}
-                                            onChange={(e) => setEditStartDate(e.target.value)}
-                                        />
-                                    </div>
-                                    <div style={styles.formGroup}>
-                                        <label style={styles.formLabel}>Due Date</label>
-                                        <input
-                                            style={styles.formDate}
-                                            type="date"
-                                            value={editDueDate}
-                                            onChange={(e) => setEditDueDate(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
 
-                                <div style={styles.formActions}>
-                                    <button style={styles.saveEditBtn} onClick={() => saveEdit(task._id)}>
-                                        <FiSave style={{ marginRight: '4px' }} /> Save
-                                    </button>
-                                    <button style={styles.cancelFormBtn} onClick={cancelEdit}>
-                                        <FiX style={{ marginRight: '4px' }} /> Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            /* ===== DISPLAY MODE ===== */
-                            <>
-                                <div style={styles.taskTopRow}>
-                                    <span style={{
-                                        ...styles.taskText,
-                                        ...(task.status === 'Completed' ? styles.completedText : {}),
-                                    }}>
-                                        {task.text}
-                                    </span>
-
-                                    <div style={styles.taskActions}>
-                                        <button style={styles.iconBtn} onClick={() => startEdit(task)} title="Edit Task">
-                                            <FiEdit2 />
-                                        </button>
-                                        <button style={{ ...styles.iconBtn, color: '#ef4444' }} onClick={() => handleDelete(task._id)} title="Delete Task">
-                                            <FiTrash2 />
-                                        </button>
+                                        <div className="date-info">
+                                            <FiCalendar style={{ fontSize: '0.9rem', color: '#94a3b8' }} />
+                                            <span className="date-text">
+                                                {formatDate(task.start_date)} → {formatDate(task.due_date)}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
-
-                                <div style={styles.taskBottomRow}>
-                                    <select
-                                        style={{
-                                            ...styles.statusSelect,
-                                            color: statusConf.color,
-                                            background: statusConf.bg,
-                                        }}
-                                        value={task.status || 'Pending'}
-                                        onChange={(e) => handleStatusChange(task._id, e.target.value)}
-                                    >
-                                        <option value="Pending">⏳ Pending</option>
-                                        <option value="In Progress">🔄 In Progress</option>
-                                        <option value="Completed">✅ Completed</option>
-                                    </select>
-
-                                    <div style={styles.dateInfo}>
-                                        <FiCalendar style={{ fontSize: '0.8rem', color: '#94a3b8' }} />
-                                        <span style={styles.dateText}>
-                                            {formatDate(task.start_date)} → {formatDate(task.due_date)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                );
-            })}
+                                </>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 }
-
-/* ============================================================
-   Professional Inline Styles
-   ============================================================ */
-const styles = {
-    summaryBar: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '10px',
-        marginBottom: '20px',
-    },
-    summaryCard: {
-        background: '#fff',
-        borderRadius: '12px',
-        padding: '14px 10px',
-        textAlign: 'center',
-        border: '1px solid #e2e8f0',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
-    },
-    summaryNum: {
-        fontSize: '1.5rem',
-        fontWeight: 700,
-    },
-    summaryLabel: {
-        fontSize: '0.7rem',
-        color: '#94a3b8',
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-    },
-    addTaskBtn: {
-        width: '100%',
-        padding: '14px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '12px',
-        fontSize: '0.95rem',
-        fontWeight: 600,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'inherit',
-        marginBottom: '20px',
-        transition: 'opacity 0.2s',
-    },
-    formCard: {
-        background: '#fff',
-        borderRadius: '14px',
-        padding: '20px',
-        marginBottom: '20px',
-        border: '2px solid #e2e8f0',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-    },
-    formTitle: {
-        fontSize: '1rem',
-        fontWeight: 600,
-        color: '#1e293b',
-        margin: '0 0 14px',
-        display: 'flex',
-        alignItems: 'center',
-    },
-    formInput: {
-        width: '100%',
-        padding: '12px 14px',
-        border: '2px solid #e2e8f0',
-        borderRadius: '10px',
-        fontSize: '0.93rem',
-        outline: 'none',
-        fontFamily: 'inherit',
-        marginBottom: '12px',
-        boxSizing: 'border-box',
-    },
-    formRow: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        gap: '10px',
-        marginBottom: '14px',
-    },
-    formGroup: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
-    },
-    formLabel: {
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        color: '#64748b',
-        textTransform: 'uppercase',
-        letterSpacing: '0.3px',
-    },
-    formSelect: {
-        padding: '9px 10px',
-        border: '2px solid #e2e8f0',
-        borderRadius: '8px',
-        fontSize: '0.85rem',
-        outline: 'none',
-        fontFamily: 'inherit',
-        cursor: 'pointer',
-        background: '#fff',
-    },
-    formDate: {
-        padding: '9px 10px',
-        border: '2px solid #e2e8f0',
-        borderRadius: '8px',
-        fontSize: '0.85rem',
-        outline: 'none',
-        fontFamily: 'inherit',
-    },
-    formActions: {
-        display: 'flex',
-        gap: '10px',
-    },
-    createBtn: {
-        padding: '10px 20px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '0.88rem',
-        fontWeight: 600,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        fontFamily: 'inherit',
-    },
-    cancelFormBtn: {
-        padding: '10px 20px',
-        background: '#f1f5f9',
-        color: '#64748b',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '0.88rem',
-        fontWeight: 500,
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-    },
-    taskCard: {
-        background: '#fff',
-        borderRadius: '12px',
-        padding: '16px',
-        marginBottom: '10px',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
-        transition: 'box-shadow 0.2s',
-    },
-    taskTopRow: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        gap: '10px',
-        marginBottom: '10px',
-    },
-    taskText: {
-        flex: 1,
-        fontSize: '0.95rem',
-        fontWeight: 500,
-        color: '#1e293b',
-        lineHeight: 1.5,
-    },
-    completedText: {
-        textDecoration: 'line-through',
-        color: '#94a3b8',
-    },
-    taskActions: {
-        display: 'flex',
-        gap: '4px',
-        flexShrink: 0,
-    },
-    iconBtn: {
-        background: 'none',
-        border: 'none',
-        color: '#667eea',
-        cursor: 'pointer',
-        fontSize: '1rem',
-        padding: '4px 6px',
-        borderRadius: '6px',
-        display: 'flex',
-        transition: 'background 0.15s',
-    },
-    taskBottomRow: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '10px',
-    },
-    statusSelect: {
-        padding: '4px 10px',
-        border: 'none',
-        borderRadius: '20px',
-        fontSize: '0.78rem',
-        fontWeight: 600,
-        cursor: 'pointer',
-        outline: 'none',
-        fontFamily: 'inherit',
-    },
-    dateInfo: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '5px',
-    },
-    dateText: {
-        fontSize: '0.78rem',
-        color: '#94a3b8',
-    },
-    editContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    saveEditBtn: {
-        padding: '10px 20px',
-        background: '#dcfce7',
-        color: '#16a34a',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '0.88rem',
-        fontWeight: 600,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        fontFamily: 'inherit',
-    },
-    emptyState: {
-        textAlign: 'center',
-        padding: '40px 0',
-    },
-};
 
 export default TaskList;

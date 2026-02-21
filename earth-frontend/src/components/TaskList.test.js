@@ -30,7 +30,7 @@ const { useTasks } = require('../hooks/useTasks');
 const mockTasks = [
     {
         _id: '1',
-        text: 'Build REST APIs',
+        title: 'Build REST APIs',
         status: 'Pending',
         start_date: '2026-02-17',
         due_date: '2026-02-20',
@@ -38,7 +38,7 @@ const mockTasks = [
     },
     {
         _id: '2',
-        text: 'Write unit tests',
+        title: 'Write unit tests',
         status: 'In Progress',
         start_date: '2026-02-18',
         due_date: '2026-02-22',
@@ -46,7 +46,7 @@ const mockTasks = [
     },
     {
         _id: '3',
-        text: 'Deploy to production',
+        title: 'Deploy to production',
         status: 'Completed',
         start_date: '2026-02-15',
         due_date: '2026-02-16',
@@ -130,7 +130,7 @@ describe('TaskList Rendering', () => {
         setupMock({ tasks: [], loading: false });
         render(<TaskList userEmail="test@example.com" />);
 
-        expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+        expect(screen.getByText(/no tasks found/i)).toBeInTheDocument();
     });
 
     test('displays task count summary', () => {
@@ -164,7 +164,7 @@ describe('TaskList Interactions', () => {
         fireEvent.click(screen.getByText('Add New Task'));
 
         // Form should now be visible
-        expect(screen.getByPlaceholderText(/what needs to be done/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Task Title/i)).toBeInTheDocument();
         expect(screen.getByText('Create Task')).toBeInTheDocument();
     });
 
@@ -209,7 +209,7 @@ describe('TaskList Interactions', () => {
 
         // Open form and enter task
         fireEvent.click(screen.getByText('Add New Task'));
-        fireEvent.change(screen.getByPlaceholderText(/what needs to be done/i), {
+        fireEvent.change(screen.getByPlaceholderText(/Task Title/i), {
             target: { value: 'New test task' },
         });
 
@@ -219,7 +219,7 @@ describe('TaskList Interactions', () => {
         await waitFor(() => {
             expect(mockAddTask).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    text: 'New test task',
+                    title: 'New test task',
                     status: 'Pending',
                 })
             );
