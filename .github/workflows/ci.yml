@@ -1,0 +1,65 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-backend:
+    name: Run Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          cd earth-backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run Django Tests
+        env:
+          MONGO_HOST: localhost
+          MONGO_PORT: 27017
+          MONGO_DB: test_db
+        run: |
+          cd earth-backend/backend
+          python manage.py test users
+
+  test-frontend:
+    name: Run Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd earth-frontend
+          npm install
+      - name: Run React Tests
+        run: |
+          cd earth-frontend
+          npm test -- --watchAll=false
+
+  docker-build:
+    name: Test Docker Builds
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Backend Image
+        run: docker build -t earth-backend ./earth-backend
+      - name: Build Frontend Image
+        run: docker build -t earth-frontend ./earth-frontend

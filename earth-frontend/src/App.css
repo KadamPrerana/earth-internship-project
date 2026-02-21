@@ -1,0 +1,27 @@
+/* ============================================================
+   App.css — Global Application Styles
+   ============================================================
+   Contains layout styles for the main app container
+   and utility animations.
+   ============================================================ */
+
+/* Main container — centers content vertically and horizontally */
+.app-container {
+  min-height: 100vh;
+  background: #f8fafc;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+/* Wrapper constrains content width for readability */
+.app-wrapper {
+  width: 100%;
+  max-width: 520px;
+}
+
+/* Spinner animation for loading states */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

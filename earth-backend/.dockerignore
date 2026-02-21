@@ -1,0 +1,19 @@
+# ============================================================
+# .dockerignore — Files to Exclude from Docker Build Context
+# ============================================================
+# What: Tells Docker which files to skip when building
+# Why:  Reduces build context size and speeds up builds
+#       Prevents unnecessary files from being copied into the image
+# ============================================================
+
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.git/
+.gitignore
+.env
+*.sqlite3
+db.sqlite3
+.vscode/
+*.md

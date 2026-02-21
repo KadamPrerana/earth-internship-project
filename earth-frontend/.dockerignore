@@ -1,0 +1,15 @@
+# ============================================================
+# .dockerignore — Files to Exclude from Docker Build Context
+# ============================================================
+# What: Tells Docker which files to skip when building
+# Why:  node_modules alone can be 200MB+, excluding it makes
+#       the build much faster since npm install runs fresh
+# ============================================================
+
+node_modules/
+build/
+.git/
+.gitignore
+.env
+*.md
+.vscode/

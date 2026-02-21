@@ -1,0 +1,92 @@
+# ============================================================
+# docker-compose.yml — Full Stack App Orchestration
+# ============================================================
+# What: Defines and runs all 3 services (MongoDB, Django, React)
+# How:  Each service is a Docker container connected via a network
+# Why:  One command (docker-compose up) starts the entire app
+#
+# Services:
+#   1. mongo    — MongoDB database (port 27017)
+#   2. backend  — Django REST API (port 8000)
+#   3. frontend — React app via Nginx (port 3000)
+#
+# Usage:
+#   docker-compose up --build     # Build & start all services
+#   docker-compose up -d          # Start in background (detached)
+#   docker-compose down           # Stop all services
+#   docker-compose logs backend   # View backend logs
+# ============================================================
+
+version: "3.8"
+
+services:
+
+  # ===========================================================
+  # SERVICE 1: MongoDB Database
+  # ===========================================================
+  # What: Runs MongoDB 6.0 as the database server
+  # Why:  The Django backend stores all user and task data here
+  # Data: Uses a named volume (mongo_data) so data persists
+  #       even when the container is stopped/removed
+  # ===========================================================
+  mongo:
+    image: mongo:6 # Official MongoDB 6.0 image
+    container_name: earth_mongo # Friendly container name
+    ports:
+      - "27017:27017" # Expose MongoDB port to host
+    volumes:
+      - mongo_data:/data/db # Persist data in named volume
+    restart: unless-stopped # Auto-restart on crash
+
+  # ===========================================================
+  # SERVICE 2: Django Backend (REST API)
+  # ===========================================================
+  # What: Runs the Django REST API server
+  # How:  Builds from earth-backend/Dockerfile
+  # Why:  Serves all API endpoints (/api/users/, /api/users/tasks/)
+  # Env:  MONGO_HOST=mongo tells Django to connect to the mongo
+  #       container instead of localhost
+  # ===========================================================
+  backend:
+    build:
+      context: ./earth-backend # Build from earth-backend directory
+      dockerfile: Dockerfile
+    container_name: earth_backend # Friendly container name
+    ports:
+      - "8000:8000" # Expose Django port to host
+    environment:
+      - MONGO_HOST=mongo # MongoDB hostname (container name)
+      - MONGO_PORT=27017 # MongoDB port
+      - MONGO_DB=intern_db # Database name
+    depends_on:
+      - mongo # Wait for MongoDB to start first
+    restart: unless-stopped
+
+  # ===========================================================
+  # SERVICE 3: React Frontend
+  # ===========================================================
+  # What: Serves the React app via Nginx
+  # How:  Builds from earth-frontend/Dockerfile (multi-stage)
+  # Why:  Provides the user interface for the Task Manager
+  # Port: Maps host port 3000 to container port 80 (Nginx)
+  # ===========================================================
+  frontend:
+    build:
+      context: ./earth-frontend # Build from earth-frontend directory
+      dockerfile: Dockerfile
+    container_name: earth_frontend # Friendly container name
+    ports:
+      - "3000:80" # Map host 3000 → container 80 (Nginx)
+    depends_on:
+      - backend # Wait for backend to start first
+    restart: unless-stopped
+
+# ===========================================================
+# NAMED VOLUMES
+# ===========================================================
+# What: Persistent storage that survives container restarts
+# Why:  Without a volume, MongoDB data is lost when the
+#       container stops. Named volumes persist the data.
+# ===========================================================
+volumes:
+  mongo_data: # MongoDB data volume
