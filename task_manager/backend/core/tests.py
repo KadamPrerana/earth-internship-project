@@ -13,7 +13,9 @@ import mongoengine
 from core.models import User, Task, ActivityLog
 
 
-JWT_SECRET = 'taskmanager-secret-key-2026'
+import os
+
+JWT_SECRET = os.getenv('JWT_SECRET', 'taskmanager-secret-key-2026')
 JWT_ALGORITHM = 'HS256'
 
 
