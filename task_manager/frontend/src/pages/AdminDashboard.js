@@ -123,17 +123,6 @@ export default function AdminDashboard() {
     const handleAssignTask = async (e) => {
         e.preventDefault();
         setUserNotFound(false);
-
-        const today = new Date().toISOString().split('T')[0];
-        if (newAssignment.start_date && newAssignment.start_date < today) {
-            setError('Start date cannot be in the past');
-            return;
-        }
-        if (newAssignment.due_date && newAssignment.due_date < (newAssignment.start_date || today)) {
-            setError('Due date must be after start date');
-            return;
-        }
-
         try {
             await api.post('/api/admin/tasks/assign/', newAssignment);
             setNewAssignment({ title: '', description: '', assigned_to: '', status: 'Pending', priority: 'Medium', start_date: '', due_date: '' });
@@ -457,12 +446,12 @@ export default function AdminDashboard() {
                                 <div className="form-row">
                                     <div className="form-field">
                                         <label>Start Date</label>
-                                        <input type="date" value={newAssignment.start_date} min={new Date().toISOString().split('T')[0]}
+                                        <input type="date" value={newAssignment.start_date}
                                             onChange={(e) => setNewAssignment({ ...newAssignment, start_date: e.target.value })} />
                                     </div>
                                     <div className="form-field">
                                         <label>Due Date</label>
-                                        <input type="date" value={newAssignment.due_date} min={newAssignment.start_date || new Date().toISOString().split('T')[0]}
+                                        <input type="date" value={newAssignment.due_date}
                                             onChange={(e) => setNewAssignment({ ...newAssignment, due_date: e.target.value })} />
                                     </div>
                                     <div className="form-field form-actions-row">

@@ -1,5 +1,5 @@
 from django.urls import path
-from core.views import auth_views, task_views, admin_views, file_views
+from core.views import auth_views, task_views, admin_views
 
 urlpatterns = [
     # ── Auth ──────────────────────────────────────────
@@ -14,9 +14,6 @@ urlpatterns = [
     path('api/tasks/export/csv/', task_views.export_tasks),# GET
     path('api/tasks/<str:task_id>/', task_views.get_task),            # GET
     path('api/tasks/<str:task_id>/update/', task_views.update_task),  # PUT
-    path('api/tasks/<str:task_id>/files/generate-upload-url/', file_views.generate_upload_url), # POST
-    path('api/tasks/<str:task_id>/files/confirm-upload/', file_views.confirm_upload), # POST
-    path('api/tasks/<str:task_id>/files/generate-download-url/', file_views.generate_download_url), # GET
     path('api/tasks/<str:task_id>/delete/', task_views.delete_task),  # DELETE
     path('api/tasks/<str:task_id>/complete/', task_views.complete_task),  # PATCH
 

@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.local
+.env.*.local
+
+# Python virtual environments
+venv/
+env/
+.venv/
+zappa_env/
+*_env/
+
+# Build outputs
+frontend/build/
+*.egg-info/
+dist/
+build/
+*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Database
+*.sqlite3
+db.sqlite3

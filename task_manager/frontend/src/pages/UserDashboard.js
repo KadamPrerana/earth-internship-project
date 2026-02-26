@@ -43,17 +43,6 @@ export default function UserDashboard() {
     const handleCreateTask = async (e) => {
         e.preventDefault();
         if (!newTask.title.trim()) return;
-
-        const today = new Date().toISOString().split('T')[0];
-        if (newTask.start_date && newTask.start_date < today) {
-            setError('Start date cannot be in the past');
-            return;
-        }
-        if (newTask.due_date && newTask.due_date < (newTask.start_date || today)) {
-            setError('Due date must be after start date');
-            return;
-        }
-
         try {
             await api.post('/api/tasks/', newTask);
             setNewTask({ title: '', description: '', priority: 'Medium', start_date: '', due_date: '' });
@@ -178,12 +167,12 @@ export default function UserDashboard() {
                             </div>
                             <div className="form-field">
                                 <label>Start Date</label>
-                                <input type="date" value={newTask.start_date} min={new Date().toISOString().split('T')[0]}
+                                <input type="date" value={newTask.start_date}
                                     onChange={(e) => setNewTask({ ...newTask, start_date: e.target.value })} />
                             </div>
                             <div className="form-field">
                                 <label>Due Date</label>
-                                <input type="date" value={newTask.due_date} min={newTask.start_date || new Date().toISOString().split('T')[0]}
+                                <input type="date" value={newTask.due_date}
                                     onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })} />
                             </div>
                             <div className="form-field form-actions-row">

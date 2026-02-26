@@ -29,15 +29,15 @@ class JWTAuthMiddleware:
         if request.method == 'OPTIONS':
             return self.get_response(request)
 
-        if any(path in request.path for path in PUBLIC_PATHS):
+        if any(request.path.startswith(path) for path in PUBLIC_PATHS):
             return self.get_response(request)
 
         # Skip auth for non-API paths (admin panel, static files, etc.)
-        if '/api/' not in request.path:
+        if not request.path.startswith('/api/'):
             return self.get_response(request)
 
         # Extract token from Authorization header
-        auth_header = request.META.get('HTTP_AUTHORIZATION') or request.META.get('HTTP_X_AUTHORIZATION', '')
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
         if not auth_header.startswith('Bearer '):
             return JsonResponse(
                 {'error': 'Authentication required. Provide Bearer token.'},

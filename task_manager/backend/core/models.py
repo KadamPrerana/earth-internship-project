@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, BooleanField, DateTimeField, ListField, DictField
+from mongoengine import Document, StringField, BooleanField, DateTimeField
 from datetime import datetime
 
 
@@ -38,7 +38,6 @@ class Task(Document):
     created_by = StringField(required=True)   # creator email
     created_at = DateTimeField(default=datetime.now)
     updated_at = DateTimeField(default=datetime.now)
-    attachments = ListField(DictField(), default=list)
 
     meta = {
         'collection': 'tasks',
@@ -65,8 +64,7 @@ class Task(Document):
             'assigned_to': self.assigned_to,
             'created_by': self.created_by,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'attachments': self.attachments
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
 
