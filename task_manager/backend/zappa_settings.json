@@ -1,0 +1,21 @@
+{
+    "production": {
+        "django_settings": "taskmanager.settings",
+        "profile_name": "default",
+        "aws_region": "us-east-1",
+        "s3_bucket": "earth-zappa-deployments-bucket-prod",
+        "runtime": "python3.10",
+        "memory_size": 512,
+        "timeout_seconds": 30,
+        "environment_variables": {
+            "MONGO_HOST": "mongodb+srv://Admin:TaskManager2026@cluster0.b0yln6h.mongodb.net/taskmanager_db?appName=Cluster0",
+            "MONGO_PORT": "27017",
+            "MONGO_DB": "taskmanager_db",
+            "JWT_SECRET": "taskmanager-secret-key-2026",
+            "ALLOWED_HOSTS": "*",
+            "AWS_REGION": "us-east-1"
+        },
+        "cors": false,
+        "keep_warm": false
+    }
+}
