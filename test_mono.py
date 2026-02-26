@@ -6,7 +6,7 @@ import re
 MODEL_PATH = "/home/prerana/Documents/Project Sakshi/hf_cache/hub/models--Salesforce--codegen-350M-mono/snapshots/d9107f71cca463240db1143f4a75a927a27fcb27"
 
 st.set_page_config(page_title="Django AI Code Reviewer", layout="wide")
-st.title("🚀 Django AI Code Reviewer (Local CodeGen-350M)")
+st.title(" Django AI Code Reviewer (Local CodeGen-350M)")
 
 @st.cache_resource
 def load_model():
