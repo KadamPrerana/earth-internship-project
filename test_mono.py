@@ -156,4 +156,4 @@ if run_suggest:
             suggestion = generate_safe_pattern(code_input)
         st.subheader("💡 Model-Generated Safe Code Pattern")
         st.info("ℹ️ CodeGen-350M completes code patterns — it does not follow review instructions like a chat model would.")
-        st.code(suggestion, language="python")
+        st.code(suggestion, language="python")# new test change
